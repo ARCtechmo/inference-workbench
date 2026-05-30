@@ -139,8 +139,28 @@ For new readers: read this README, then ARCHITECTURE.
 
 ## Setup and run
 
-To be written in the implementation phase. The app will be run locally
-for development; deployment posture is deferred.
+Requires [conda](https://docs.conda.io/) (Miniconda or Anaconda) and git.
+
+```bash
+# Clone
+git clone https://github.com/ARCtechmo/inference-workbench.git
+cd inference-workbench
+
+# Create the environment (Python 3.11)
+conda create -n inference-workbench python=3.11 -y
+
+# Activate it
+conda activate inference-workbench
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+The environment must be activated (`conda activate inference-workbench`)
+in any new terminal before running the app or the tests.
+
+The Streamlit entry point and run command are added in a later phase, once
+the app layer exists. See `NEXT_TASKS.md` for current status.
 
 ---
 
