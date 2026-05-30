@@ -1,0 +1,28 @@
+# inference-workbench — Python dependencies
+#
+# Pinning strategy: minimum pins (>=). Floors a known-working version
+# without locking into version churn. Updated as the implementation
+# matures.
+#
+# Scope: v1 only. v1 ships binomial logistic regression end to end.
+# Dependencies for deferred model families (survival, Bayesian,
+# multilevel) and broader hypothesis-test infrastructure are added
+# when those phases open. See FUTURE_FEATURES.md.
+
+# --- UI ---
+streamlit>=1.30
+
+# --- Core scientific Python ---
+numpy>=1.24
+pandas>=2.0
+scipy>=1.11
+
+# --- Plotting ---
+matplotlib>=3.7
+
+# --- Regression and inference ---
+statsmodels>=0.14
+
+# --- Development tooling ---
+pytest>=7.0
+ruff>=0.1
