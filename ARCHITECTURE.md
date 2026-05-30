@@ -326,3 +326,78 @@ Captured for reference here; the working list lives in
 - `FUTURE_FEATURES.md` — the parking lot
 - `REPO_SETUP_PROCEDURE.md`, `SECURE_GIT_WORKFLOW.md` — personal,
   generic procedure docs; not specific to this project
+
+
+---
+
+## 11. Implementation log
+
+*A running, append-only record of what was actually built, session by
+session. Design decisions live in §1–§10 and are durable; this section
+captures the concrete contracts as implemented. New entries are appended
+at the bottom — earlier entries are never edited. When an implemented
+contract diverges from a §1–§10 decision, the most recent log entry is
+the current truth.*
+
+### 2026-05-30 — Phases 2–4
+
+**Phase 2 — environment.** Dedicated conda env `inference-workbench` on
+Python 3.11. Dependencies installed from `requirements.txt` (the v1
+floor: streamlit, numpy, pandas, scipy, statsmodels, matplotlib, pytest,
+ruff). README "Setup and run" section written (clone → create env →
+activate → install). Run command deferred until the app layer exists.
+
+**Phase 3 — `data_io/` (as built).** The loader contract is now concrete:
+
+- `load_csv(path)` returns a `(DataFrame, DatasetMetadata)` pair on
+  success.
+- The DataFrame uses pandas' **native** type inference only. No
+  analytical typing happens here — that is the profile layer's job. This
+  enforces the §3.1 / §6 boundary: `data_io` reads honestly and stops.
+- `DatasetMetadata` is a `frozen` dataclass of **observed facts only**:
+  `source_path`, `n_rows`, `n_cols`, `column_names`, `dtypes` (column →
+  native pandas dtype string), `loaded_at`. No judgments.
+- Failures raise `DataLoadError` (a custom exception) with a
+  UI-displayable message, for: file missing, not a file, empty/no
+  columns, unparseable, or unreadable. A failed load has no valid
+  DataFrame to return, so an exception — not a result object — is the
+  honest model.
+- `load_parquet` and `load_excel` exist as raising stubs
+  (`NotImplementedError`, pointing to `FUTURE_FEATURES.md`). They
+  document intent and fail cleanly if called early.
+
+Files: `data_io/{loader.py, metadata.py, exceptions.py, __init__.py}`.
+
+**Phase 4 — `profile/` (as built).** Level 2 profiling: surface, do not
+fix. Structure is seven independently testable check functions plus a
+`profile()` orchestrator (mirrors the family `diagnose()` orchestration
+pattern).
+
+- `profile(df)` returns a `frozen` `ProfileResult` holding `n_rows`,
+  `n_cols`, and a `columns` dict of `ColumnProfile` (also frozen) keyed
+  by column name.
+- Each `ColumnProfile` records: `native_dtype`, `proposed_type`,
+  `n_missing`, `pct_missing`, `n_unique`, `is_near_constant`,
+  `is_high_cardinality`, `n_outliers`.
+- **Type proposal is structural only**: `continuous | binary | count |
+  categorical | empty`. Ordinality is *not* inferred from data — it
+  cannot be reliably detected from values, and analytical
+  classification (ordinal/nominal, role) belongs to the workflow's
+  classification step, not here.
+- Heuristic thresholds are named constants at module top (tunable):
+  near-constant ≥ 95% top-value share; high-cardinality > 50 unique or
+  > 50% unique-of-rows (non-numeric only); IQR outliers at 1.5×;
+  count = non-negative int with range ≤ 100.
+- Outliers are computed only for `continuous` columns (binary/count
+  numerics would produce noise).
+- `ProfileResult.flagged_columns()` is a triage helper returning columns
+  with any surfaced issue.
+- 29 unit tests, all passing.
+
+Files: `profile/{checks.py, schema.py, __init__.py, test_profile.py}`.
+
+**Note for future phases.** On pandas 3.x, string columns report dtype
+`str`, not `object`. Profile type logic keys off semantic checks (unique
+counts, numeric-dtype tests), not the dtype string, so this is handled —
+but any future dtype-string matching must expect `str`/`string`, not
+`object`.
